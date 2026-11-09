@@ -1,4 +1,6 @@
 ---
+- import_playbook: dns_client.yml
+
 - name: Configurações Gerais para todas as Máquinas
   hosts: all
   become: true
