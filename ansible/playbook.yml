@@ -3,10 +3,14 @@
   hosts: all
   become: true
   tasks:
-    - name: Atualizar pacotes (apt update e upgrade)
+    - name: Atualizar listas de pacotes (apt update otimizado)
       apt:
         update_cache: yes
-        upgrade: yes
+        cache_valid_time: 3600
+
+    - name: Configurar fuso horário para America/Recife
+      timezone:
+        name: America/Recife
 
     - name: Configurar fuso horário para America/Recife
       timezone:
