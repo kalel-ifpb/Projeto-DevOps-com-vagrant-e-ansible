@@ -19,7 +19,7 @@ Este projeto automatiza o provisionamento e a configuração de um ambiente de r
 
 ## Como Executar
 
-O Vagrant e o VirtualBox precisam estar instalados na sua máquina. Você pode apenas executar o up.sh (bash up.sh) e fazer o provisionamento automaticamente seguido do status das máquinas:
+O Vagrant e o VirtualBox precisam estar instalados na sua máquina. Você pode apenas executar o script up e fazer o provisionamento automaticamente seguido do status das máquinas:
 
    ```bash
    bash up.sh
