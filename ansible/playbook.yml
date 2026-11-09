@@ -1,0 +1,324 @@
+---
+- name: Configurações Gerais para todas as Máquinas
+  hosts: all
+  become: true
+  tasks:
+    - name: Atualizar pacotes (apt update e upgrade)
+      apt:
+        update_cache: yes
+        upgrade: yes
+
+    - name: Configurar fuso horário para America/Recife
+      timezone:
+        name: America/Recife
+
+    - name: Instalar pacotes base (chrony, nfs-common)
+      apt:
+        name: 
+          - chrony
+          - nfs-common
+        state: present
+
+    - name: Configurar Chrony para pool.ntp.br
+      lineinfile:
+        path: /etc/chrony/chrony.conf
+        regexp: '^pool'
+        line: 'pool pool.ntp.br iburst'
+      notify: Restart Chrony
+
+    - name: Criar grupo 'ifpb'
+      group:
+        name: ifpb
+        state: present
+
+    - name: Criar usuários (francisco e kalel)
+      user:
+        name: "{{ item }}"
+        groups: ifpb
+        append: yes
+        shell: /bin/bash
+        generate_ssh_key: yes
+        ssh_key_bits: 2048
+      loop:
+        - francisco
+        - kalel
+      register: usuarios_criados
+
+    - name: Autorizar a chave pública gerada de cada usuário
+      authorized_key:
+        user: "{{ item.name }}"
+        key: "{{ item.ssh_public_key }}"
+      loop: "{{ usuarios_criados.results }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: Configurar Sudo para grupo ifpb
+      copy:
+        dest: /etc/sudoers.d/ifpb
+        content: "%ifpb ALL=(ALL) NOPASSWD: ALL\n"
+        mode: '0440'
+        validate: /usr/sbin/visudo -cf %s
+
+    - name: Criar banner SSH
+      copy:
+        dest: /etc/issue.net
+        content: "Acesso apenas para pessoas com autorização expressa!!!\n"
+
+    - name: Configurar restrições SSH
+      blockinfile:
+        path: /etc/ssh/sshd_config
+        insertbefore: BOF
+        validate: /usr/sbin/sshd -t -f %s
+        block: |
+          PermitRootLogin no
+          PasswordAuthentication no
+          PubkeyAuthentication yes
+          AllowGroups vagrant ifpb
+          Banner /etc/issue.net
+      notify: Restart SSH
+
+  handlers:
+    - name: Restart Chrony
+      service: name=chrony state=restarted
+    - name: Restart SSH
+      service: name=ssh state=restarted
+
+- name: Configuração do Servidor de Arquivos (arq)
+  hosts: arq
+  become: true
+  tasks:
+    - name: Instalar DHCP, BIND9 e NFS Server
+      apt:
+        name: 
+          - isc-dhcp-server
+          - bind9
+          - bind9utils
+          - lvm2
+          - nfs-kernel-server
+        state: present
+
+    - name: Configurar interface padrão para DHCP
+      lineinfile:
+        path: /etc/default/isc-dhcp-server
+        regexp: '^INTERFACESv4='
+        line: 'INTERFACESv4="eth1"'
+
+    - name: Configurar dhcpd.conf
+      copy:
+        dest: /etc/dhcp/dhcpd.conf
+        content: |
+          default-lease-time 180;
+          max-lease-time 3600;
+          authoritative;
+          
+          subnet 192.168.56.0 netmask 255.255.255.0 {
+            range 192.168.56.50 192.168.56.100;
+            option routers 192.168.56.1;
+            option domain-name-servers 192.168.56.178;
+            option domain-name "francisco.kalel.devops";
+          }
+          
+          host db {
+            hardware ethernet 08:00:27:11:11:11;
+            fixed-address 192.168.56.121;
+          }
+          
+          host app {
+            hardware ethernet 08:00:27:22:22:22;
+            fixed-address 192.168.56.171;
+          }
+      notify: Restart DHCP
+
+    - name: Configurar BIND9 (named.conf.options)
+      copy:
+        dest: /etc/bind/named.conf.options
+        content: |
+          options {
+              directory "/var/cache/bind";
+              forwarders { 1.1.1.1; 8.8.8.8; };
+              allow-query { 192.168.56.0/24; localhost; };
+              dnssec-validation auto;
+              listen-on-v6 { any; };
+          };
+      notify: Restart BIND9
+
+    - name: Criar Zonas BIND9
+      copy:
+        dest: /etc/bind/named.conf.local
+        content: |
+          zone "francisco.kalel.devops" {
+              type master;
+              file "/etc/bind/db.francisco.kalel.devops";
+          };
+          zone "56.168.192.in-addr.arpa" {
+              type master;
+              file "/etc/bind/db.192.168.56";
+          };
+      notify: Restart BIND9
+
+    - name: Arquivo de Zona Direta
+      copy:
+        dest: /etc/bind/db.francisco.kalel.devops
+        content: |
+          $TTL    604800
+          @       IN      SOA     arq.francisco.kalel.devops. admin.francisco.kalel.devops. (
+                                      2         ; Serial
+                                 604800         ; Refresh
+                                  86400         ; Retry
+                                2419200         ; Expire
+                                 604800 )       ; Negative Cache TTL
+          ;
+          @       IN      NS      arq.francisco.kalel.devops.
+          arq     IN      A       192.168.56.178
+          db      IN      A       192.168.56.121
+          app     IN      A       192.168.56.171
+      notify: Restart BIND9
+
+    - name: Arquivo de Zona Reversa
+      copy:
+        dest: /etc/bind/db.192.168.56
+        content: |
+          $TTL    604800
+          @       IN      SOA     arq.francisco.kalel.devops. admin.francisco.kalel.devops. (
+                                      1         ; Serial
+                                 604800         ; Refresh
+                                  86400         ; Retry
+                                2419200         ; Expire
+                                 604800 )       ; Negative Cache TTL
+          ;
+          @       IN      NS      arq.francisco.kalel.devops.
+          178     IN      PTR     arq.francisco.kalel.devops.
+          121     IN      PTR     db.francisco.kalel.devops.
+          171     IN      PTR     app.francisco.kalel.devops.
+      notify: Restart BIND9
+
+    - name: Criar Volume Group (dados) usando 3 discos
+      lvg:
+        vg: dados
+        pvs: /dev/sdb,/dev/sdc,/dev/sdd
+
+    - name: Criar Logical Volume (ifpb)
+      lvol:
+        vg: dados
+        lv: ifpb
+        size: 15G
+
+    - name: Formatar LV ifpb em ext4
+      filesystem:
+        fstype: ext4
+        dev: /dev/dados/ifpb
+
+    - name: Montar partição LVM em /dados
+      mount:
+        path: /dados
+        src: /dev/dados/ifpb
+        fstype: ext4
+        state: mounted
+
+    - name: Criar usuário nfs-ifpb
+      user:
+        name: nfs-ifpb
+        shell: /bin/false
+        uid: 2000
+        create_home: no
+
+    - name: Criar diretório do NFS e ajustar permissões
+      file:
+        path: /dados/nfs
+        state: directory
+        owner: nfs-ifpb
+        mode: '0755'
+
+    - name: Configurar /etc/exports
+      copy:
+        dest: /etc/exports
+        content: "/dados/nfs 192.168.56.0/24(rw,sync,no_wdelay,all_squash,anonuid=2000,anongid=2000)\n"
+      notify: Restart NFS
+
+  handlers:
+    - name: Restart DHCP
+      service: name=isc-dhcp-server state=restarted
+    - name: Restart BIND9
+      service: name=bind9 state=restarted
+    - name: Restart NFS
+      service: name=nfs-kernel-server state=restarted
+
+- name: Configuração comum para clientes NFS (db, app, cli)
+  hosts: db, app, cli
+  become: true
+  tasks:
+    - name: Instalar Autofs
+      apt:
+        name: autofs
+        state: present
+
+    - name: Configurar Auto.master
+      lineinfile:
+        path: /etc/auto.master
+        line: "/- /etc/auto.nfs"
+      notify: Restart Autofs
+        
+    - name: Configurar mapeamento NFS no autofs
+      copy:
+        dest: /etc/auto.nfs
+        content: "/var/nfs -fstype=nfs,rw 192.168.56.178:/dados/nfs\n"
+      notify: Restart Autofs
+
+  handlers:
+    - name: Restart Autofs
+      service: name=autofs state=restarted
+
+- name: Configuração Banco de Dados (db)
+  hosts: db
+  become: true
+  tasks:
+    - name: Instalar MariaDB
+      apt:
+        name: mariadb-server
+        state: present
+
+- name: Configuração da Aplicação (app)
+  hosts: app
+  become: true
+  tasks:
+    - name: Instalar Apache2
+      apt:
+        name: apache2
+        state: present
+
+    - name: Criar index.html customizado
+      copy:
+        dest: /var/www/html/index.html
+        content: |
+          <html>
+            <body>
+              <h1>Projeto 01 - DevOps com Vagrant e Ansible</h1>
+              <p>Disciplina: Administracao de Sistemas Abertos</p>
+              <ul>
+                <li>Francisco Farias do Nascimento (Matricula: 20251380001)</li>
+                <li>Kalel Aleksander Nery Bezerra (Matricula: 20251380030)</li>
+              </ul>
+            </body>
+          </html>
+
+- name: Configuração do Cliente (cli)
+  hosts: cli
+  become: true
+  tasks:
+    - name: Instalar Firefox e Xauth
+      apt:
+        name: 
+          - firefox-esr
+          - xauth
+        state: present
+
+    - name: Habilitar X11Forwarding no SSH
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?X11Forwarding'
+        line: 'X11Forwarding yes'
+      notify: Restart SSH
+
+  handlers:
+    - name: Restart SSH
+      service: name=ssh state=restarted
