@@ -1,0 +1,7 @@
+# Pastas e arquivos gerados pelo Vagrant
+.vagrant/
+*.vbox
+*.vbox-prev
+
+# Logs e arquivos temporários do Ansible
+*.retry
