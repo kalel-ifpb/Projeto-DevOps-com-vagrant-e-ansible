@@ -1,5 +1,3 @@
-# Inventário para execuções MANUAIS (ansible-playbook -i ansible/inventory.yml ...).
-# Durante o "vagrant up" o Vagrant usa o próprio inventário gerado automaticamente.
 all:
   vars:
     ansible_user: vagrant
