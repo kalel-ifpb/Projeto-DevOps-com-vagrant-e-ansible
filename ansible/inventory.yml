@@ -18,6 +18,4 @@ all:
     cli:
       hosts:
         cli:
-          # IP vem do DHCP (faixa 50-100). Descubra com:
-          #   vagrant ssh cli -c "ip -4 -br a show eth1"
           ansible_host: 192.168.56.50
