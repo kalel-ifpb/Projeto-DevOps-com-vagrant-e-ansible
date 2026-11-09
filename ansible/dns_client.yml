@@ -1,0 +1,16 @@
+---
+- name: Configurar cliente DNS em todos os hosts
+  hosts: all
+  become: true
+  tasks:
+    - name: Apontar resolução DNS para o servidor BIND9 local (arq)
+      ansible.builtin.copy:
+        dest: /etc/resolv.conf
+        content: |
+          nameserver 192.168.56.178
+          search francisco.kalel.devops
+
+    - name: Proteger /etc/resolv.conf contra sobrescrita pelo DHCP
+      ansible.builtin.file:
+        path: /etc/resolv.conf
+        attributes: +i
