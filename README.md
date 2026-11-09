@@ -23,7 +23,7 @@ O Vagrant e o VirtualBox precisam estar instalados na sua máquina. Você pode a
 
    ```bash
    bash up.sh
-
+   ```
 Ou manualmente seguindo a ordem de execução abaixo, uma vez que as máquinas dependem do DHCP e DNS do servidor de arquivos:
 
 1. **Subir e provisionar o Servidor de Arquivos (arq) primeiro:**
