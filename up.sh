@@ -1,5 +1,7 @@
 set -e
 
+sudo apt-get install -y vagrant ansible ssh-askpass
+
 echo "=== [1/3] Subindo e provisionando o servidor de arquivos (arq)... ==="
 vagrant up arq
 
