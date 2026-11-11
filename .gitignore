@@ -5,3 +5,6 @@
 
 # Logs e arquivos temporários do Ansible
 *.retry
+keys/
+.vagrant/
+verifica-proj1.py

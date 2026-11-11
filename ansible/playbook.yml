@@ -36,26 +36,55 @@
         name: ifpb
         state: present
 
+    - name: Criar diretório keys/ no hospedeiro
+      file:
+        path: "{{ playbook_dir }}/../keys"
+        state: directory
+        mode: '0700'
+      delegate_to: localhost
+      become: false
+      run_once: true
+
+    - name: Gerar par de chaves de cada usuário no hospedeiro (uma única vez)
+      command:
+        argv:
+          - ssh-keygen
+          - -t
+          - rsa
+          - -b
+          - "2048"
+          - -N
+          - ""
+          - -C
+          - "{{ item }}"
+          - -f
+          - "{{ playbook_dir }}/../keys/{{ item }}"
+      args:
+        creates: "{{ playbook_dir }}/../keys/{{ item }}"
+      delegate_to: localhost
+      become: false
+      run_once: true
+      loop:
+        - francisco
+        - kalel
+
     - name: Criar usuários (francisco e kalel)
       user:
         name: "{{ item }}"
         groups: ifpb
         append: yes
         shell: /bin/bash
-        generate_ssh_key: yes
-        ssh_key_bits: 2048
       loop:
         - francisco
         - kalel
-      register: usuarios_criados
 
-    - name: Autorizar a chave pública gerada de cada usuário
+    - name: Autorizar a chave pública de cada usuário
       authorized_key:
-        user: "{{ item.name }}"
-        key: "{{ item.ssh_public_key }}"
-      loop: "{{ usuarios_criados.results }}"
-      loop_control:
-        label: "{{ item.name }}"
+        user: "{{ item }}"
+        key: "{{ lookup('file', playbook_dir + '/../keys/' + item + '.pub') }}"
+      loop:
+        - francisco
+        - kalel
 
     - name: Configurar Sudo para grupo ifpb
       copy:
@@ -119,18 +148,18 @@
           subnet 192.168.56.0 netmask 255.255.255.0 {
             range 192.168.56.50 192.168.56.100;
             option routers 192.168.56.1;
-            option domain-name-servers 192.168.56.178;
+            option domain-name-servers 192.168.56.101;
             option domain-name "francisco.kalel.devops";
           }
           
           host db {
             hardware ethernet 08:00:27:11:11:11;
-            fixed-address 192.168.56.121;
+            fixed-address 192.168.56.130;
           }
           
           host app {
             hardware ethernet 08:00:27:22:22:22;
-            fixed-address 192.168.56.171;
+            fixed-address 192.168.56.110;
           }
       notify: Restart DHCP
 
@@ -174,9 +203,9 @@
                                  604800 )       ; Negative Cache TTL
           ;
           @       IN      NS      arq.francisco.kalel.devops.
-          arq     IN      A       192.168.56.178
-          db      IN      A       192.168.56.121
-          app     IN      A       192.168.56.171
+          arq     IN      A       192.168.56.101
+          db      IN      A       192.168.56.130
+          app     IN      A       192.168.56.110
       notify: Restart BIND9
 
     - name: Arquivo de Zona Reversa
@@ -192,9 +221,9 @@
                                  604800 )       ; Negative Cache TTL
           ;
           @       IN      NS      arq.francisco.kalel.devops.
-          178     IN      PTR     arq.francisco.kalel.devops.
-          121     IN      PTR     db.francisco.kalel.devops.
-          171     IN      PTR     app.francisco.kalel.devops.
+          101     IN      PTR     arq.francisco.kalel.devops.
+          130     IN      PTR     db.francisco.kalel.devops.
+          110     IN      PTR     app.francisco.kalel.devops.
       notify: Restart BIND9
 
     - name: Criar Volume Group (dados) usando 3 discos
@@ -266,7 +295,7 @@
     - name: Configurar mapeamento NFS no autofs
       copy:
         dest: /etc/auto.nfs
-        content: "/var/nfs -fstype=nfs,rw 192.168.56.178:/dados/nfs\n"
+        content: "/var/nfs -fstype=nfs,rw 192.168.56.101:/dados/nfs\n"
       notify: Restart Autofs
 
   handlers:

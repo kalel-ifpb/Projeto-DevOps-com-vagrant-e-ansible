@@ -6,15 +6,15 @@ all:
     arq:
       hosts:
         arq:
-          ansible_host: 192.168.56.178
+          ansible_host: 192.168.56.101
     db:
       hosts:
         db:
-          ansible_host: 192.168.56.121
+          ansible_host: 192.168.56.130
     app:
       hosts:
         app:
-          ansible_host: 192.168.56.171
+          ansible_host: 192.168.56.110
     cli:
       hosts:
         cli:

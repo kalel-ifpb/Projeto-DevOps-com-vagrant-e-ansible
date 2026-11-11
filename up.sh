@@ -19,6 +19,6 @@ echo "=== [3/3] Status das máquinas: ==="
 echo " "
 vagrant status
 echo " "
-echo "192.168.56.171 app.francisco.kalel.devops" | sudo tee -a /etc/hosts
+echo "192.168.56.110 app.francisco.kalel.devops" | sudo tee -a /etc/hosts
 echo " "
 printf "Tempo de execução: %d:%02d min\n" $minutos $segundos

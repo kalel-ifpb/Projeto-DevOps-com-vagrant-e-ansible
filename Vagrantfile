@@ -21,6 +21,21 @@ Vagrant.configure("2") do |config|
     t.on_error = :continue
   end
 
+       config.trigger.after :up do |t|
+       t.only_on = "cli"
+       t.info = "Atualizando /etc/hosts do hospedeiro (pede sudo)"
+       t.ruby do |env, machine|
+         ip = String.new
+         machine.communicate.execute("ip -4 -o addr show eth1 | awk '{print $4}' | cut -d/ -f1") { |_, d| ip << d }
+         dom = "francisco.kalel.devops"
+         { "arq" => "192.168.56.101", "db" => "192.168.56.130",
+           "app" => "192.168.56.110", "cli" => ip.strip }.each do |nome, addr|
+           system("sudo sed -i '/ #{nome}.#{dom}$/d' /etc/hosts")
+           system("echo '#{addr} #{nome}.#{dom}' | sudo tee -a /etc/hosts > /dev/null")
+         end
+       end
+     end
+
   config.vm.provision "ansible" do |ansible|
     ansible.compatibility_mode = "2.0"
     ansible.playbook = "ansible/playbook.yml"
@@ -29,7 +44,7 @@ Vagrant.configure("2") do |config|
 
   config.vm.define "arq" do |arq|
     arq.vm.hostname = "arq.francisco.kalel.devops"
-    arq.vm.network "private_network", ip: "192.168.56.178"
+    arq.vm.network "private_network", ip: "192.168.56.101"
     arq.vm.disk :disk, size: "10GB", name: "disk1"
     arq.vm.disk :disk, size: "10GB", name: "disk2"
     arq.vm.disk :disk, size: "10GB", name: "disk3"
