@@ -3,15 +3,18 @@
   hosts: all
   become: true
   tasks:
+    - name: Pré-configurar o GRUB (evita falha do grub-pc durante o upgrade)
+      debconf:
+        name: grub-pc
+        question: grub-pc/install_devices
+        vtype: multiselect
+        value: /dev/sda
+
     - name: Atualizar listas de pacotes (apt update otimizado)
       apt:
         update_cache: yes
         cache_valid_time: 3600
         #upgrade: yes
-
-    - name: Configurar fuso horário para America/Recife
-      timezone:
-        name: America/Recife
 
     - name: Configurar fuso horário para America/Recife
       timezone:
