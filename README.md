@@ -37,4 +37,6 @@ vagrant status
 ```bash
 resolvectl dns $(ip route show default | awk '{print $5}') 192.168.56.101 1.1.1.3 $(hostname -i | awk '{print $1}')
 ```
+Esse comando configura temporariamente sua conexão de internet principal no Linux para usar três servidores DNS específicos (um local na rede 192.168.56.101, o filtro da Cloudflare 1.1.1.3 e o próprio IP da sua máquina).
+
 **Link do site: http://app.francisco.kalel.devops**
