@@ -37,3 +37,4 @@ Antes de abrir o site, rode o comando abaixo e forneça a senha de permissão:
 ```bash
 resolvectl dns eno2 192.168.56.101 1.1.1.3 $(hostname -i | awk '{print $1}')
 ```
+Link do site: http://app.francisco.kalel.devops
