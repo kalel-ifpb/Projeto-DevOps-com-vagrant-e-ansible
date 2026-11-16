@@ -19,24 +19,11 @@ Este projeto automatiza o provisionamento e a configuração de um ambiente de r
 
 ## Como Executar
 
-O Vagrant e o VirtualBox precisam estar instalados na sua máquina. Você pode apenas executar o script up e fazer o provisionamento automaticamente seguido do status das máquinas:
+Antes tenha certeza que o vagrant e o ansible estão na máquina linux:
+   sudo apt install -y vagrant ansible ssh-askpass
 
-   ```bash
-   bash up.sh
-   ```
-Ou manualmente seguindo a ordem de execução abaixo, uma vez que as máquinas dependem do DHCP e DNS do servidor de arquivos:
+Depois apenas rode o comando abaixo:
+   vagrant up
 
-1. **Subir e provisionar o Servidor de Arquivos (arq) primeiro:**
-   Isso garante que o DHCP e o DNS já estejam rodando para das próximas máquinas.
-   ```bash
-   vagrant up arq
-
-2. **Subir e provisionar o restante da infraestrutura (db, app, cli):**
-   Execute o comando para iniciar e provisionar o banco de dados, a aplicação e o cliente em sequência:
-   ```bash
-   vagrant up db app cli
-
-3. **(Opcional: exibir o status das máquinas):**
-   Pra verificar o status das máquinas após o termino do processo:
-   ```bash
+Se quiser analizar se está tudo ok:
    vagrant status
