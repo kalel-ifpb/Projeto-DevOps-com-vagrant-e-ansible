@@ -19,7 +19,7 @@ Este projeto automatiza o provisionamento e a configuração de um ambiente de r
 
 ## Como Executar
 
-O Vagrant e o VirtualBox precisam estar instalados na sua máquina. Para subir e provisionar toda a infraestrutura, basta um único comando:
+**O Vagrant e o VirtualBox precisam estar instalados na sua máquina. Para subir e provisionar toda a infraestrutura, basta um único comando:**
 
 ```bash
 vagrant up
@@ -32,9 +32,9 @@ As máquinas são criadas e provisionadas em sequência (`arq`, `db`, `app` e `c
 ```bash
 vagrant status
 ```
-Antes de abrir o site, rode o comando abaixo e forneça a senha de permissão:
+**Antes de abrir o site, rode o comando abaixo e forneça a senha de permissão:**
 
 ```bash
 resolvectl dns $(ip route show default | awk '{print $5}') 192.168.56.101 1.1.1.3 $(hostname -i | awk '{print $1}')
 ```
-Link do site: http://app.francisco.kalel.devops
+**Link do site: http://app.francisco.kalel.devops**
